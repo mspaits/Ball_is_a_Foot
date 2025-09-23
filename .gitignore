@@ -4,3 +4,28 @@
 # Roblox Studio lock files
 /*.rbxlx.lock
 /*.rbxl.lock
+
+# Roblox Studio autosaves and backups
+*.rbxl.autosave
+*.rbxlx.autosave
+*.rbxl.lock
+*.rbxlx.lock
+*.rbxl.backup
+*.rbxlx.backup
+
+# Roblox exported models and places (optional: keep if you export assets manually)
+*.rbxm
+*.rbxmx
+*.rbxl
+*.rbxlx
+
+# VS Code settings
+.vscode/
+
+# Rojo build artifacts
+out/
+sourcemap.json
+
+# Logs and temp files
+*.log
+*.tmp
