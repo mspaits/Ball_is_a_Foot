@@ -45,8 +45,5 @@
         "$path": "ui"
       }
     }
-    /* Intentionally NOT mapping Workspace/Lighting/SoundService here,
-       so your existing field, goals, and environment settings remain
-       controlled by the .rbxl place, not by Rojo JSON. */
   }
 }
