@@ -2,71 +2,51 @@
   "name": "Ball_is_a_Foot",
   "tree": {
     "$className": "DataModel",
-
     "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
       "Shared": {
         "$path": "src/shared"
+      },
+      "Assets": {
+        "$className": "Folder",
+        "$path": "assets"
+      },
+      "Remotes": {
+        "$className": "Folder",
+        "KickRequest": {
+          "$className": "RemoteEvent"
+        },
+        "SprintState": {
+          "$className": "RemoteEvent"
+        },
+        "ScoreUpdate": {
+          "$className": "RemoteEvent"
+        }
       }
     },
-
     "ServerScriptService": {
+      "$className": "ServerScriptService",
       "Server": {
         "$path": "src/server"
       }
     },
-
     "StarterPlayer": {
+      "$className": "StarterPlayer",
       "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
         "Client": {
           "$path": "src/client"
         }
       }
     },
-
-    "Workspace": {
-      "$properties": {
-        "FilteringEnabled": true
-      },
-      "Baseplate": {
-        "$className": "Part",
-        "$properties": {
-          "Anchored": true,
-          "Color": [
-            0.38823,
-            0.37254,
-            0.38823
-          ],
-          "Locked": true,
-          "Position": [
-            0,
-            -10,
-            0
-          ],
-          "Size": [
-            512,
-            20,
-            512
-          ]
-        }
-      }
-    },
-    "Lighting": {
-      "$properties": {
-        "Ambient": [
-          0,
-          0,
-          0
-        ],
-        "Brightness": 2,
-        "GlobalShadows": true,
-        "Outlines": false,
-        "Technology": "Voxel"
-      }
-    },
-    "SoundService": {
-      "$properties": {
-        "RespectFilteringEnabled": true
+    "StarterGui": {
+      "$className": "StarterGui",
+      "MainHud": {
+        "$path": "ui"
       }
     }
+    /* Intentionally NOT mapping Workspace/Lighting/SoundService here,
+       so your existing field, goals, and environment settings remain
+       controlled by the .rbxl place, not by Rojo JSON. */
   }
 }
