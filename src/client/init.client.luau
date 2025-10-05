@@ -76,6 +76,9 @@ local function getKickOrigin()
 	return character and character.PrimaryPart or nil
 end
 
+local FOOTBALL_NAME = "Football"
+local FOOT_NAME = "StinkyFoot"
+
 local function findNearestBall()
 	local origin = getKickOrigin()
 	if not origin then
@@ -85,13 +88,24 @@ local function findNearestBall()
 	local closest
 	local closestDist = Config.KICK_RANGE + 1
 
+	local function consider(part)
+		if not part or not part:IsA("BasePart") then
+			return
+		end
+		local dist = (part.Position - origin.Position).Magnitude
+		if dist < closestDist then
+			closestDist = dist
+			closest = part
+		end
+	end
+
 	for _, inst in ipairs(workspace:GetChildren()) do
-		if inst:IsA("BasePart") and (inst.Name == "Football" or inst.Name == "StinkyFoot") then
-			local dist = (inst.Position - origin.Position).Magnitude
-			if dist < closestDist then
-				closestDist = dist
-				closest = inst
+		if inst:IsA("BasePart") then
+			if inst.Name == FOOTBALL_NAME or inst.Name == FOOT_NAME then
+				consider(inst)
 			end
+		elseif inst:IsA("Model") and inst.Name == FOOT_NAME then
+			consider(inst.PrimaryPart or inst:FindFirstChildWhichIsA("BasePart"))
 		end
 	end
 
@@ -178,3 +192,4 @@ end)
 
 awaitCharacter()
 updateScores({})
+

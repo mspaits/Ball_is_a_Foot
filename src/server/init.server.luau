@@ -11,6 +11,11 @@ local REMOTE_KICK = Remotes.getRemote("KickRequest")
 local REMOTE_SPRINT = Remotes.getRemote("SprintState")
 local REMOTE_SCORE = Remotes.getRemote("ScoreUpdate")
 
+local FOOTBALL_NAME = "Football"
+local FOOTBALL_TEMPLATE = "FootballTemplate"
+local FOOT_NAME = "StinkyFoot"
+local FOOT_TEMPLATE = "StinkyFootTemplate"
+
 local function ensureTeam(name : string, color : BrickColor)
 	local team = TeamsService:FindFirstChild(name)
 	if team then
@@ -68,27 +73,92 @@ local function randomUnitXZ()
 	return Vector3.new(math.cos(theta), 0, math.sin(theta))
 end
 
-local function applyKick(ball : BasePart, forceDirection : Vector3)
+local function findAncestorNamed(inst : Instance, target : string)
+	local current = inst
+	while current do
+		if current.Name == target then
+			return current
+		end
+		current = current.Parent
+	end
+	return nil
+end
+
+local function getAssemblyInfo(part : BasePart)
+	local footModel = findAncestorNamed(part, FOOT_NAME)
+	if footModel and footModel:IsA("Model") then
+		local primary = footModel.PrimaryPart or footModel:FindFirstChildWhichIsA("BasePart") or part
+		return "StinkyFoot", footModel, primary
+	end
+
+	if part.Name == FOOT_NAME then
+		return "StinkyFoot", nil, part
+	end
+
+	local footballModel = findAncestorNamed(part, FOOTBALL_NAME)
+	if footballModel and footballModel:IsA("Model") then
+		local primary = footballModel.PrimaryPart or footballModel:FindFirstChildWhichIsA("BasePart") or part
+		return "Football", footballModel, primary
+	end
+
+	if part.Name == FOOTBALL_NAME then
+		return "Football", nil, part
+	end
+
+	return nil, nil, part
+end
+
+local function applyImpulseToAssembly(part : BasePart, impulse : Vector3)
+	local _, footModel, primaryPart = getAssemblyInfo(part)
+	local target = primaryPart or part
+	target:ApplyImpulse(impulse * target.AssemblyMass)
+
+	if footModel then
+		for _, descendant in ipairs(footModel:GetDescendants()) do
+			if descendant:IsA("BasePart") and descendant ~= target then
+				descendant:ApplyImpulse(impulse * descendant:GetMass())
+			end
+		end
+	end
+end
+
+local function applyAngularImpulse(part : BasePart, angularImpulse : Vector3)
+	local _, footModel, primaryPart = getAssemblyInfo(part)
+	local target = primaryPart or part
+	target:ApplyAngularImpulse(angularImpulse * target.AssemblyMass)
+
+	if footModel then
+		for _, descendant in ipairs(footModel:GetDescendants()) do
+			if descendant:IsA("BasePart") and descendant ~= target then
+				descendant:ApplyAngularImpulse(angularImpulse * descendant:GetMass())
+			end
+		end
+	end
+end
+
+local function applyKick(targetPart : BasePart, forceDirection : Vector3)
 	local base = forceDirection.Unit * Config.KICK_BASE_FORCE
 	local sideways = randomUnitXZ() * Config.KICK_RANDOM_SIDE * Config.KICK_BASE_FORCE
-	local impulse = (base + sideways) * ball.AssemblyMass
+	local impulse = base + sideways
 
-	ball:ApplyImpulse(impulse)
+	applyImpulseToAssembly(targetPart, impulse)
 
 	local axis = Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5)
 	if axis.Magnitude < 1e-3 then
 		axis = Vector3.new(0, 1, 0)
 	end
-	local angularImpulse = axis.Unit * Config.KICK_RANDOM_TORQUE * ball.AssemblyMass
-	ball:ApplyAngularImpulse(angularImpulse)
+	local angularImpulse = axis.Unit * Config.KICK_RANDOM_TORQUE
+	applyAngularImpulse(targetPart, angularImpulse)
 end
 
 if REMOTE_KICK then
-	REMOTE_KICK.OnServerEvent:Connect(function(player, ball)
-		if typeof(ball) ~= "Instance" or not ball:IsA("BasePart") then
+	REMOTE_KICK.OnServerEvent:Connect(function(player, target)
+		if typeof(target) ~= "Instance" or not target:IsA("BasePart") then
 			return
 		end
-		if ball.Name ~= "Football" and ball.Name ~= "StinkyFoot" then
+
+		local kind = select(1, getAssemblyInfo(target))
+		if kind ~= "Football" and kind ~= "StinkyFoot" then
 			return
 		end
 
@@ -98,13 +168,13 @@ if REMOTE_KICK then
 			return
 		end
 
-		local distance = (ball.Position - primary.Position).Magnitude
+		local distance = (target.Position - primary.Position).Magnitude
 		if distance > Config.KICK_RANGE then
 			return
 		end
 
-		local direction = (ball.Position - primary.Position)
-		applyKick(ball, direction)
+		local direction = (target.Position - primary.Position)
+		applyKick(target, direction)
 	end)
 end
 
@@ -184,12 +254,12 @@ end
 
 local recentRespawns : {[BasePart]: number} = {}
 
-local function resetAssembly(instance : Instance)
-	if instance:IsA("BasePart") then
-		instance.AssemblyLinearVelocity = Vector3.zero
-		instance.AssemblyAngularVelocity = Vector3.zero
-	elseif instance:IsA("Model") then
-		for _, descendant in ipairs(instance:GetDescendants()) do
+local function resetAssembly(target : Instance)
+	if target:IsA("BasePart") then
+		target.AssemblyLinearVelocity = Vector3.zero
+		target.AssemblyAngularVelocity = Vector3.zero
+	elseif target:IsA("Model") then
+		for _, descendant in ipairs(target:GetDescendants()) do
 			if descendant:IsA("BasePart") then
 				descendant.AssemblyLinearVelocity = Vector3.zero
 				descendant.AssemblyAngularVelocity = Vector3.zero
@@ -198,42 +268,44 @@ local function resetAssembly(instance : Instance)
 	end
 end
 
-local function tagRecent(instance : Instance, timeStamp : number)
-	if instance:IsA("BasePart") then
-		recentRespawns[instance] = timeStamp
-	elseif instance:IsA("Model") then
-		for _, descendant in ipairs(instance:GetDescendants()) do
+local function tagRecent(target : Instance, timestamp : number)
+	if target:IsA("BasePart") then
+		recentRespawns[target] = timestamp
+	elseif target:IsA("Model") then
+		for _, descendant in ipairs(target:GetDescendants()) do
 			if descendant:IsA("BasePart") then
-				recentRespawns[descendant] = timeStamp
+				recentRespawns[descendant] = timestamp
 			end
 		end
 	end
 end
 
-local function respawnBall(hitPart : BasePart)
+local function respawnBall(part : BasePart)
+	local kind, footModel, primary = getAssemblyInfo(part)
 	local now = tick()
-	local container = hitPart:FindFirstAncestorOfClass("Model")
-	if container and container.Name == "StinkyFoot" then
-		container:PivotTo(Config.RESPAWN_CFRAME)
-		resetAssembly(container)
-		tagRecent(container, now)
+
+	if kind == "StinkyFoot" and footModel then
+		footModel:PivotTo(Config.RESPAWN_CFRAME)
+		resetAssembly(footModel)
+		tagRecent(footModel, now)
 		return
 	end
 
-	hitPart.CFrame = Config.RESPAWN_CFRAME
-	resetAssembly(hitPart)
-	recentRespawns[hitPart] = now
+	local basePart = primary or part
+	basePart.CFrame = Config.RESPAWN_CFRAME
+	resetAssembly(basePart)
+	recentRespawns[basePart] = now
 end
 
-local function spawnTemplate(name : string, overrideName : string?)
-	local template = ServerStorage:FindFirstChild(name)
+local function spawnTemplate(templateName : string, desiredName : string)
+	local template = ServerStorage:FindFirstChild(templateName)
 	if not template then
-		warn(('[Spawner] Missing template %s in ServerStorage'):format(name))
+		warn(('[Spawner] Missing template %s in ServerStorage'):format(templateName))
 		return nil
 	end
 
 	local clone = template:Clone()
-	clone.Name = overrideName or template.Name
+	clone.Name = desiredName
 	clone.Parent = Workspace
 
 	local spawnCFrame = chooseSpawnCFrame()
@@ -247,7 +319,7 @@ local function spawnTemplate(name : string, overrideName : string?)
 	elseif clone:IsA("Model") then
 		local primary = clone.PrimaryPart or clone:FindFirstChildWhichIsA("BasePart")
 		if not primary then
-			warn(('[Spawner] Template %s has no BasePart to position'):format(name))
+			warn(('[Spawner] Template %s has no BasePart to position'):format(templateName))
 			clone:Destroy()
 			return nil
 		end
@@ -257,30 +329,37 @@ local function spawnTemplate(name : string, overrideName : string?)
 		tagRecent(clone, now)
 		return clone
 	else
-		warn(('[Spawner] Template %s must be BasePart or Model'):format(name))
+		warn(('[Spawner] Template %s must be a BasePart or Model'):format(templateName))
 		clone:Destroy()
 		return nil
 	end
 end
 
 local function spawnFootball()
-	return spawnTemplate("FootballTemplate", "Football")
+	return spawnTemplate(FOOTBALL_TEMPLATE, FOOTBALL_NAME)
 end
 
 local function spawnStinkyFoot()
-	return spawnTemplate("StinkyFootTemplate", "StinkyFoot")
+	return spawnTemplate(FOOT_TEMPLATE, FOOT_NAME)
+end
+
+local function countActiveBalls()
+	local total = 0
+	for _, child in ipairs(Workspace:GetChildren()) do
+		if child:IsA("BasePart") and child.Name == FOOTBALL_NAME then
+			total += 1
+		elseif child:IsA("Model") and child.Name == FOOT_NAME then
+			total += 1
+		end
+	end
+	return total
 end
 
 task.spawn(function()
 	while true do
 		task.wait(Config.FOOTBALL_SPAWN_INTERVAL)
 
-		local count = 0
-		for _, descendant in ipairs(Workspace:GetDescendants()) do
-			if descendant:IsA("BasePart") and (descendant.Name == "Football" or descendant.Name == "StinkyFoot") then
-				count += 1
-			end
-		end
+		local count = countActiveBalls()
 		if count >= Config.MAX_FOOTBALLS then
 			continue
 		end
@@ -303,30 +382,42 @@ local function hookGoal(goalPart : BasePart?, team : Team, basePoints : number, 
 		if not hit:IsA("BasePart") then
 			return
 		end
-		if hit.Name ~= "Football" and hit.Name ~= "StinkyFoot" then
+
+		local kind, footModel, rootPart = getAssemblyInfo(hit)
+		if not kind then
 			return
 		end
 
-		local lastRespawn = recentRespawns[hit]
+		local keyPart = rootPart or hit
+		local lastRespawn = recentRespawns[hit] or recentRespawns[keyPart]
 		if lastRespawn and tick() - lastRespawn < Config.BALL_RESPAWN_LOCK then
 			return
 		end
 
 		local points = basePoints
-		if allowFootBonus and hit.Name == "StinkyFoot" then
-			points = Config.POINT_STINKY_FOOT
-		elseif hit.Name == "StinkyFoot" and not allowFootBonus then
-			return
+		if kind == "StinkyFoot" then
+			if allowFootBonus then
+				points = Config.POINT_STINKY_FOOT
+			else
+				return
+			end
 		end
 
 		addScore(team, points)
-		respawnBall(hit)
+		respawnBall(keyPart)
 	end)
 end
-
 hookGoal(Workspace:FindFirstChild("Goal_Red_Soccer"), TEAM_RED, Config.POINT_SOCCER_GOAL, true)
 hookGoal(Workspace:FindFirstChild("Goal_Blue_Soccer"), TEAM_BLUE, Config.POINT_SOCCER_GOAL, true)
 hookGoal(Workspace:FindFirstChild("Goal_Red_Posts"), TEAM_RED, Config.POINT_FIELD_GOAL, false)
 hookGoal(Workspace:FindFirstChild("Goal_Blue_Posts"), TEAM_BLUE, Config.POINT_FIELD_GOAL, false)
 
 broadcastScore()
+
+
+
+
+
+
+
+
