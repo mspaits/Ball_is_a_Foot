@@ -139,7 +139,8 @@ end
 local function applyKick(targetPart : BasePart, forceDirection : Vector3)
 	local base = forceDirection.Unit * Config.KICK_BASE_FORCE
 	local sideways = randomUnitXZ() * Config.KICK_RANDOM_SIDE * Config.KICK_BASE_FORCE
-	local impulse = base + sideways
+	local upward = Vector3.new(0, Config.KICK_UPWARD_BIAS * Config.KICK_BASE_FORCE, 0)
+	local impulse = base + sideways + upward
 
 	applyImpulseToAssembly(targetPart, impulse)
 
