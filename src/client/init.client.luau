@@ -13,6 +13,7 @@ local REMOTE_KICK = Remotes.getRemote("KickRequest")
 local REMOTE_SPRINT = Remotes.getRemote("SprintState")
 local REMOTE_SCORE = Remotes.getRemote("ScoreUpdate")
 
+-- Make a GUI
 local gui = Instance.new("ScreenGui")
 
 gui.Name = "BallIsAFootHud"
@@ -25,6 +26,7 @@ gui.DisplayOrder = 10
 
 gui.Parent = player:WaitForChild("PlayerGui")
 
+-- Define properties and size of gui
 local function createScoreLabel(name : string, anchorX : number)
 	local label = Instance.new("TextLabel")
 	label.Name = name .. "Score"
@@ -44,6 +46,7 @@ end
 local redLabel = createScoreLabel("Red", 0)
 local blueLabel = createScoreLabel("Blue", 1)
 
+-- Function that updates scores when REMOTE_SCORE happens
 local function updateScores(payload)
 	if typeof(payload) ~= "table" then
 		return
@@ -60,6 +63,7 @@ if REMOTE_SCORE then
 	REMOTE_SCORE.OnClientEvent:Connect(updateScores)
 end
 
+-- Something to sense if there is a character and its primary part near a kickable object
 local function awaitCharacter()
 	repeat
 		task.wait()
@@ -79,6 +83,7 @@ end
 local FOOTBALL_NAME = "Football"
 local FOOT_NAME = "StinkyFoot"
 
+-- Figuring out where the nearest ball is and if it is in kick range
 local function findNearestBall()
 	local origin = getKickOrigin()
 	if not origin then
@@ -112,6 +117,7 @@ local function findNearestBall()
 	return closest
 end
 
+-- Functions for connecting remote kick to target and registering to serve?
 local function kick()
 	if not REMOTE_KICK then
 		return
@@ -123,6 +129,7 @@ local function kick()
 	end
 end
 
+-- For some reason taking into account if they are sprinting or not?
 local sprinting = false
 
 local function setSprinting(state : boolean)
@@ -151,6 +158,7 @@ local function onSprintAction(_, state)
 	return Enum.ContextActionResult.Sink
 end
 
+-- Declaring key binding for PC and Console
 ContextActionService:BindAction("KickBall", onKickAction, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2, Enum.KeyCode.ButtonA)
 ContextActionService:BindAction("Sprint", onSprintAction, false, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3)
 

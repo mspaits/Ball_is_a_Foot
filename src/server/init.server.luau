@@ -4,6 +4,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local TeamsService = game:GetService("Teams")
 local Workspace = game:GetService("Workspace")
 
+-- Both module scripts in ReplicatedStorage
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -11,11 +12,13 @@ local REMOTE_KICK = Remotes.getRemote("KickRequest")
 local REMOTE_SPRINT = Remotes.getRemote("SprintState")
 local REMOTE_SCORE = Remotes.getRemote("ScoreUpdate")
 
+-- Define names of football and stinky foot
 local FOOTBALL_NAME = "Football"
 local FOOTBALL_TEMPLATE = "FootballTemplate"
 local FOOT_NAME = "StinkyFoot"
 local FOOT_TEMPLATE = "StinkyFootTemplate"
 
+-- Get players on team
 local function ensureTeam(name : string, color : BrickColor)
 	local team = TeamsService:FindFirstChild(name)
 	if team then
@@ -33,11 +36,13 @@ end
 local TEAM_RED = ensureTeam("Red", BrickColor.new("Bright red"))
 local TEAM_BLUE = ensureTeam("Blue", BrickColor.new("Bright blue"))
 
+-- Creating dictionary to hold team score
 local scoreByTeam = {
 	[TEAM_RED] = 0,
 	[TEAM_BLUE] = 0,
 }
 
+-- Adding points to team
 local function broadcastScore()
 	if REMOTE_SCORE then
 		REMOTE_SCORE:FireAllClients({
@@ -57,6 +62,7 @@ local function addScore(team : Team, points : number)
 	broadcastScore()
 end
 
+-- Assigning joining players to a team, removing disconnecting players
 Players.PlayerAdded:Connect(function(player)
 	local redCount = #TeamsService:GetPlayersOnTeam(TEAM_RED)
 	local blueCount = #TeamsService:GetPlayersOnTeam(TEAM_BLUE)
@@ -68,11 +74,13 @@ Players.PlayerRemoving:Connect(function(player)
 	player:SetAttribute("Sprinting", nil)
 end)
 
+-- A function for randomly assigning a kick vector?
 local function randomUnitXZ()
 	local theta = math.random() * math.pi * 2
 	return Vector3.new(math.cos(theta), 0, math.sin(theta))
 end
 
+-- Checks if the thing you are trying to kick is what you are allowed to kick and finds its parent?
 local function findAncestorNamed(inst : Instance, target : string)
 	local current = inst
 	while current do
@@ -84,6 +92,7 @@ local function findAncestorNamed(inst : Instance, target : string)
 	return nil
 end
 
+-- Identify the thing to kick and its asemply info
 local function getAssemblyInfo(part : BasePart)
 	local footModel = findAncestorNamed(part, FOOT_NAME)
 	if footModel and footModel:IsA("Model") then
@@ -108,6 +117,7 @@ local function getAssemblyInfo(part : BasePart)
 	return nil, nil, part
 end
 
+-- Defines kick impulse to apply to the football or foot.
 local function applyImpulseToAssembly(part : BasePart, impulse : Vector3)
 	local _, footModel, primaryPart = getAssemblyInfo(part)
 	local target = primaryPart or part
@@ -122,6 +132,7 @@ local function applyImpulseToAssembly(part : BasePart, impulse : Vector3)
 	end
 end
 
+-- Defines angle of impulse to apply to football or foot.
 local function applyAngularImpulse(part : BasePart, angularImpulse : Vector3)
 	local _, footModel, primaryPart = getAssemblyInfo(part)
 	local target = primaryPart or part
@@ -136,6 +147,7 @@ local function applyAngularImpulse(part : BasePart, angularImpulse : Vector3)
 	end
 end
 
+-- Applies the kick in predefined amount and angle
 local function applyKick(targetPart : BasePart, forceDirection : Vector3)
 	local base = forceDirection.Unit * Config.KICK_BASE_FORCE
 	local sideways = randomUnitXZ() * Config.KICK_RANDOM_SIDE * Config.KICK_BASE_FORCE
@@ -152,6 +164,7 @@ local function applyKick(targetPart : BasePart, forceDirection : Vector3)
 	applyAngularImpulse(targetPart, angularImpulse)
 end
 
+--  Handles and approves remote kick request
 if REMOTE_KICK then
 	REMOTE_KICK.OnServerEvent:Connect(function(player, target)
 		if typeof(target) ~= "Instance" or not target:IsA("BasePart") then
@@ -179,6 +192,7 @@ if REMOTE_KICK then
 	end)
 end
 
+-- Manages sprint mechanic and stamina
 local staminaByPlayer : {[Player]: number} = {}
 
 local function setWalkSpeed(player : Player, speed : number)
@@ -192,6 +206,7 @@ local function setWalkSpeed(player : Player, speed : number)
 	end
 end
 
+-- Handles setting sprint stats and stamina for joining players
 Players.PlayerAdded:Connect(function(player)
 	staminaByPlayer[player] = Config.SPRINT_STAMINA_MAX
 	player.CharacterAdded:Connect(function()
@@ -204,6 +219,7 @@ Players.PlayerRemoving:Connect(function(player)
 	staminaByPlayer[player] = nil
 end)
 
+-- Lets player sprint if they have enough stamina
 if REMOTE_SPRINT then
 	REMOTE_SPRINT.OnServerEvent:Connect(function(player, isSprinting)
 		if staminaByPlayer[player] and staminaByPlayer[player] > 0 then
@@ -212,6 +228,7 @@ if REMOTE_SPRINT then
 	end)
 end
 
+-- Drains stamina from sprinting person
 task.spawn(function()
 	while true do
 		task.wait(0.1)
@@ -234,6 +251,7 @@ task.spawn(function()
 	end
 end)
 
+-- Ball and foot spawing position
 local spawnFolder = Workspace:FindFirstChild("BallSpawnPoints")
 
 local function chooseSpawnCFrame()
@@ -255,6 +273,7 @@ end
 
 local recentRespawns : {[BasePart]: number} = {}
 
+-- ??  This seems like a lot of code for managing ball and foot spawning.
 local function resetAssembly(target : Instance)
 	if target:IsA("BasePart") then
 		target.AssemblyLinearVelocity = Vector3.zero
@@ -336,6 +355,7 @@ local function spawnTemplate(templateName : string, desiredName : string)
 	end
 end
 
+-- Spawn ball and foot
 local function spawnFootball()
 	return spawnTemplate(FOOTBALL_TEMPLATE, FOOTBALL_NAME)
 end
@@ -344,6 +364,7 @@ local function spawnStinkyFoot()
 	return spawnTemplate(FOOT_TEMPLATE, FOOT_NAME)
 end
 
+-- Adds balls and feet to spawn
 local function countActiveBalls()
 	local total = 0
 	for _, child in ipairs(Workspace:GetChildren()) do
@@ -356,6 +377,7 @@ local function countActiveBalls()
 	return total
 end
 
+-- Controls timing of spawning and number of balls in play
 task.spawn(function()
 	while true do
 		task.wait(Config.FOOTBALL_SPAWN_INTERVAL)
@@ -373,6 +395,7 @@ task.spawn(function()
 	end
 end)
 
+-- Registering goals
 local function hookGoal(goalPart : BasePart?, team : Team, basePoints : number, allowFootBonus : boolean)
 	if not goalPart then
 		warn(('[Goals] Missing goal part for %s'):format(team.Name))
