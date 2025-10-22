@@ -80,7 +80,7 @@ local function randomUnitXZ()
 	return Vector3.new(math.cos(theta), 0, math.sin(theta))
 end
 
--- Checks if the thing you are trying to kick is what you are allowed to kick and finds its parent?
+-- Moves up in ancestry from the specified instance until it finds the instance that matches the specified target name.  Otherwise it returns nil.
 local function findAncestorNamed(inst : Instance, target : string)
 	local current = inst
 	while current do
@@ -411,7 +411,7 @@ local function hookGoal(goalPart : BasePart?, team : Team, basePoints : number, 
 		if not kind then
 			return
 		end
-
+		
 		local keyPart = rootPart or hit
 		local lastRespawn = recentRespawns[hit] or recentRespawns[keyPart]
 		if lastRespawn and tick() - lastRespawn < Config.BALL_RESPAWN_LOCK then

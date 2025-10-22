@@ -32,7 +32,7 @@ local function createScoreLabel(name : string, anchorX : number)
 	label.Name = name .. "Score"
 	label.AnchorPoint = Vector2.new(anchorX, 0)
 	label.BackgroundTransparency = 1
-	label.Position = UDim2.new(anchorX, (anchorX == 0) and 20 or -20, 0, 20)
+	label.Position = UDim2.new(anchorX, (anchorX == 0) and 20 or -20, 0, 200)
 	label.Size = UDim2.new(0, 220, 0, 54)
 	label.Font = Enum.Font.GothamBold
 	label.TextScaled = true
