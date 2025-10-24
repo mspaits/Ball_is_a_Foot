@@ -46,11 +46,69 @@ end
 local redLabel = createScoreLabel("Red", 0)
 local blueLabel = createScoreLabel("Blue", 1)
 
+local staminaMax = Config.SPRINT_STAMINA_MAX
+
+local staminaContainer = Instance.new("Frame")
+staminaContainer.Name = "StaminaBar"
+staminaContainer.AnchorPoint = Vector2.new(0.5, 1)
+staminaContainer.Position = UDim2.new(0.5, 0, 1, -40)
+staminaContainer.Size = UDim2.new(0, 320, 0, 28)
+staminaContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+staminaContainer.BackgroundTransparency = 0.3
+staminaContainer.BorderSizePixel = 0
+staminaContainer.ClipsDescendants = true
+staminaContainer.Parent = gui
+
+local staminaCorner = Instance.new("UICorner")
+staminaCorner.CornerRadius = UDim.new(0, 12)
+staminaCorner.Parent = staminaContainer
+
+local staminaStroke = Instance.new("UIStroke")
+staminaStroke.Thickness = 2
+staminaStroke.Color = Color3.fromRGB(0, 170, 255)
+staminaStroke.Transparency = 0.35
+staminaStroke.Parent = staminaContainer
+
+local staminaFill = Instance.new("Frame")
+staminaFill.Name = "Fill"
+staminaFill.AnchorPoint = Vector2.new(0, 0)
+staminaFill.Position = UDim2.new(0, 0, 0, 0)
+staminaFill.Size = UDim2.new(1, 0, 1, 0)
+staminaFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+staminaFill.BorderSizePixel = 0
+staminaFill.Parent = staminaContainer
+
+local staminaFillCorner = Instance.new("UICorner")
+staminaFillCorner.CornerRadius = UDim.new(0, 12)
+staminaFillCorner.Parent = staminaFill
+
+local staminaText = Instance.new("TextLabel")
+staminaText.Name = "Value"
+staminaText.BackgroundTransparency = 1
+staminaText.AnchorPoint = Vector2.new(0.5, 0.5)
+staminaText.Position = UDim2.new(0.5, 0, 0.5, 0)
+staminaText.Size = UDim2.new(1, -12, 1, -8)
+staminaText.Font = Enum.Font.GothamBold
+staminaText.TextColor3 = Color3.new(1, 1, 1)
+staminaText.TextStrokeTransparency = 0.4
+staminaText.TextScaled = true
+staminaText.Text = "Stamina"
+staminaText.Parent = staminaContainer
+
+local function updateStaminaBar(amount : number)
+        local ratio = 0
+        if staminaMax > 0 then
+                ratio = math.clamp(amount / staminaMax, 0, 1)
+        end
+        staminaFill.Size = UDim2.new(ratio, 0, 1, 0)
+        staminaText.Text = string.format("Stamina %d%%", math.floor(ratio * 100 + 0.5))
+end
+
 -- Function that updates scores when REMOTE_SCORE happens
 local function updateScores(payload)
-	if typeof(payload) ~= "table" then
-		return
-	end
+        if typeof(payload) ~= "table" then
+                return
+        end
 
 	local redScore = payload.Red or 0
 	local blueScore = payload.Blue or 0
@@ -60,8 +118,14 @@ local function updateScores(payload)
 end
 
 if REMOTE_SCORE then
-	REMOTE_SCORE.OnClientEvent:Connect(updateScores)
+        REMOTE_SCORE.OnClientEvent:Connect(updateScores)
 end
+
+updateStaminaBar(player:GetAttribute("Stamina") or staminaMax)
+
+player:GetAttributeChangedSignal("Stamina"):Connect(function()
+        updateStaminaBar(player:GetAttribute("Stamina") or 0)
+end)
 
 -- Something to sense if there is a character and its primary part near a kickable object
 local function awaitCharacter()

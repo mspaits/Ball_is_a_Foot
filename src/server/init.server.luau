@@ -208,15 +208,18 @@ end
 
 -- Handles setting sprint stats and stamina for joining players
 Players.PlayerAdded:Connect(function(player)
-	staminaByPlayer[player] = Config.SPRINT_STAMINA_MAX
-	player.CharacterAdded:Connect(function()
-		staminaByPlayer[player] = Config.SPRINT_STAMINA_MAX
-		setWalkSpeed(player, 16)
-	end)
+        staminaByPlayer[player] = Config.SPRINT_STAMINA_MAX
+        player:SetAttribute("Stamina", Config.SPRINT_STAMINA_MAX)
+        player.CharacterAdded:Connect(function()
+                staminaByPlayer[player] = Config.SPRINT_STAMINA_MAX
+                player:SetAttribute("Stamina", Config.SPRINT_STAMINA_MAX)
+                setWalkSpeed(player, 16)
+        end)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-	staminaByPlayer[player] = nil
+        staminaByPlayer[player] = nil
+        player:SetAttribute("Stamina", nil)
 end)
 
 -- Lets player sprint if they have enough stamina
@@ -245,10 +248,14 @@ task.spawn(function()
 			else
 				current = math.min(Config.SPRINT_STAMINA_MAX, current + Config.SPRINT_STAMINA_REGEN * 0.1)
 				setWalkSpeed(player, 16)
-			end
-			staminaByPlayer[player] = current
-		end
-	end
+                        end
+                        staminaByPlayer[player] = current
+                        local replicated = player:GetAttribute("Stamina")
+                        if replicated ~= current then
+                                player:SetAttribute("Stamina", current)
+                        end
+                end
+        end
 end)
 
 -- Ball and foot spawing position
