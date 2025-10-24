@@ -402,8 +402,7 @@ task.spawn(function()
 	end
 end)
 
--- Registering goals
-local function hookGoal(goalPart : BasePart?, team : Team, basePoints : number, allowFootBonus : boolean)
+local function hookGoal(goalPart : BasePart?, team : Team, basePoints : number, stinkyFootPoints : number?)
 	if not goalPart then
 		warn(('[Goals] Missing goal part for %s'):format(team.Name))
 		return
@@ -427,9 +426,8 @@ local function hookGoal(goalPart : BasePart?, team : Team, basePoints : number, 
 
 		local points = basePoints
 		if kind == "StinkyFoot" then
-			if allowFootBonus then
-				points = Config.POINT_STINKY_FOOT
-			else
+			points = stinkyFootPoints
+			if not points then
 				return
 			end
 		end
@@ -438,10 +436,10 @@ local function hookGoal(goalPart : BasePart?, team : Team, basePoints : number, 
 		respawnBall(keyPart)
 	end)
 end
-hookGoal(Workspace:FindFirstChild("Goal_Red_Soccer"), TEAM_RED, Config.POINT_SOCCER_GOAL, true)
-hookGoal(Workspace:FindFirstChild("Goal_Blue_Soccer"), TEAM_BLUE, Config.POINT_SOCCER_GOAL, true)
-hookGoal(Workspace:FindFirstChild("Goal_Red_Posts"), TEAM_RED, Config.POINT_FIELD_GOAL, false)
-hookGoal(Workspace:FindFirstChild("Goal_Blue_Posts"), TEAM_BLUE, Config.POINT_FIELD_GOAL, false)
+hookGoal(Workspace:FindFirstChild("Goal_Red_Soccer"), TEAM_RED, Config.POINT_SOCCER_GOAL, Config.POINT_STINKY_FOOT)
+hookGoal(Workspace:FindFirstChild("Goal_Blue_Soccer"), TEAM_BLUE, Config.POINT_SOCCER_GOAL, Config.POINT_STINKY_FOOT)
+hookGoal(Workspace:FindFirstChild("Goal_Red_Posts"), TEAM_RED, Config.POINT_FIELD_GOAL_FOOTBALL, Config.POINT_FIELD_GOAL_STINKY_FOOT)
+hookGoal(Workspace:FindFirstChild("Goal_Blue_Posts"), TEAM_BLUE, Config.POINT_FIELD_GOAL_FOOTBALL, Config.POINT_FIELD_GOAL_STINKY_FOOT)
 
 broadcastScore()
 

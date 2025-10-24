@@ -230,25 +230,35 @@ if UserInputService.TouchEnabled then
 	local touchButtonKick = Instance.new("TextButton")
 	touchButtonKick.Name = "KickButton"
 	touchButtonKick.AnchorPoint = Vector2.new(1, 1)
-	touchButtonKick.Position = UDim2.new(1, -32, 1, -32)
+	touchButtonKick.Position = UDim2.new(1, -32, .75, -32)
 	touchButtonKick.Size = UDim2.new(0, 130, 0, 64)
 	touchButtonKick.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
 	touchButtonKick.TextScaled = true
 	touchButtonKick.TextColor3 = Color3.new(1, 1, 1)
 	touchButtonKick.Text = "KICK"
 	touchButtonKick.Parent = gui
+
+	local kickCorner = Instance.new("UICorner")
+	kickCorner.CornerRadius = UDim.new(0, 12)
+	kickCorner.Parent = touchButtonKick
+
 	touchButtonKick.MouseButton1Down:Connect(kick)
 
 	local touchButtonSprint = Instance.new("TextButton")
 	touchButtonSprint.Name = "SprintButton"
-	touchButtonSprint.AnchorPoint = Vector2.new(0, 1)
-	touchButtonSprint.Position = UDim2.new(0, 32, 1, -32)
+	touchButtonSprint.AnchorPoint = Vector2.new(1, 1)
+	touchButtonSprint.Position = UDim2.new(1, -32, 1, -10)
 	touchButtonSprint.Size = UDim2.new(0, 130, 0, 64)
 	touchButtonSprint.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 	touchButtonSprint.TextScaled = true
 	touchButtonSprint.TextColor3 = Color3.new(1, 1, 1)
 	touchButtonSprint.Text = "SPRINT"
 	touchButtonSprint.Parent = gui
+
+	local sprintCorner = Instance.new("UICorner")
+	sprintCorner.CornerRadius = UDim.new(0, 12)
+	sprintCorner.Parent = touchButtonSprint
+
 	touchButtonSprint.MouseButton1Down:Connect(function()
 		setSprinting(true)
 	end)
