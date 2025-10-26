@@ -11,6 +11,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local REMOTE_KICK = Remotes.getRemote("KickRequest")
 local REMOTE_SPRINT = Remotes.getRemote("SprintState")
 local REMOTE_SCORE = Remotes.getRemote("ScoreUpdate")
+local REMOTE_WINSCREEN = Remotes.getRemote("WinScreen")
 
 -- Define names of football and stinky foot
 local FOOTBALL_NAME = "Football"
@@ -52,6 +53,13 @@ local function broadcastScore()
 	end
 end
 
+local function displayWin(team)
+	print(team .. " wins")
+	if REMOTE_WINSCREEN then
+		REMOTE_WINSCREEN:FireAllClients()
+	end
+end
+
 local function addScore(team : Team, points : number)
 	if not scoreByTeam[team] then
 		return
@@ -60,13 +68,24 @@ local function addScore(team : Team, points : number)
 	scoreByTeam[team] += points
 	print(('[Score] %s +%d | Red=%d Blue=%d'):format(team.Name, points, scoreByTeam[TEAM_RED], scoreByTeam[TEAM_BLUE]))
 	broadcastScore()
+
+	for team, score in pairs(scoreByTeam) do
+		if team == TEAM_RED and score >= Config.POINT_END_GAME then
+			displayWin("Team Red")
+		end
+
+		if team == TEAM_BLUE and score >= Config.POINT_END_GAME then
+			displayWin("Team Blue")
+		end
+	end
 end
 
 -- Assigning joining players to a team, removing disconnecting players
 Players.PlayerAdded:Connect(function(player)
-	local redCount = #TeamsService:GetPlayersOnTeam(TEAM_RED)
-	local blueCount = #TeamsService:GetPlayersOnTeam(TEAM_BLUE)
+	local redCount = #TEAM_RED:GetPlayers()
+	local blueCount = #TEAM_BLUE:GetPlayers()
 	player.Team = (blueCount <= redCount) and TEAM_BLUE or TEAM_RED
+	player.Neutral = false
 	player:SetAttribute("Sprinting", false)
 end)
 
@@ -413,7 +432,7 @@ local function hookGoal(goalPart : BasePart?, team : Team, basePoints : number, 
 			return
 		end
 
-		local kind, footModel, rootPart = getAssemblyInfo(hit)
+		local kind, _footModel, rootPart = getAssemblyInfo(hit)
 		if not kind then
 			return
 		end
@@ -442,11 +461,5 @@ hookGoal(Workspace:FindFirstChild("Goal_Red_Posts"), TEAM_RED, Config.POINT_FIEL
 hookGoal(Workspace:FindFirstChild("Goal_Blue_Posts"), TEAM_BLUE, Config.POINT_FIELD_GOAL_FOOTBALL, Config.POINT_FIELD_GOAL_STINKY_FOOT)
 
 broadcastScore()
-
-
-
-
-
-
 
 

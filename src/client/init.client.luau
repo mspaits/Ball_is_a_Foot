@@ -7,11 +7,13 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local player = Players.LocalPlayer
+local playerGui = player.PlayerGui
 local character
 
 local REMOTE_KICK = Remotes.getRemote("KickRequest")
 local REMOTE_SPRINT = Remotes.getRemote("SprintState")
 local REMOTE_SCORE = Remotes.getRemote("ScoreUpdate")
+local REMOTE_WINSCREEN = Remotes.getRemote("WinScreen")
 
 -- Make a GUI
 local gui = Instance.new("ScreenGui")
@@ -119,6 +121,19 @@ end
 
 if REMOTE_SCORE then
         REMOTE_SCORE.OnClientEvent:Connect(updateScores)
+end
+
+-- Adding win screen 
+local function displayWin()
+	print("Remote worked")
+	local winScreen = playerGui:WaitForChild("WinScreenGui")
+	winScreen.Enabled = true
+	task.wait(20)
+	winScreen.Enabled = false
+end
+
+if REMOTE_WINSCREEN then
+	REMOTE_WINSCREEN.OnClientEvent:Connect(displayWin)
 end
 
 updateStaminaBar(player:GetAttribute("Stamina") or staminaMax)
