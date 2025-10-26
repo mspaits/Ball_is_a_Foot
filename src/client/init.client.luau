@@ -123,12 +123,15 @@ if REMOTE_SCORE then
         REMOTE_SCORE.OnClientEvent:Connect(updateScores)
 end
 
--- Adding win screen 
-local function displayWin()
+-- Adding win screen displaying winning team
+local function displayWin(winningTeam)
 	print("Remote worked")
+	print(winningTeam)
 	local winScreen = playerGui:WaitForChild("WinScreenGui")
+	local guiText = winScreen.WinMessage
+	guiText.Text = winningTeam .. " team wins!"
 	winScreen.Enabled = true
-	task.wait(20)
+	task.wait(10)
 	winScreen.Enabled = false
 end
 

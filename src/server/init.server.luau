@@ -55,9 +55,13 @@ end
 
 local function displayWin(team)
 	print(team .. " wins")
+	scoreByTeam[TEAM_RED] = 0
+	scoreByTeam[TEAM_BLUE] = 0
 	if REMOTE_WINSCREEN then
-		REMOTE_WINSCREEN:FireAllClients()
+		REMOTE_WINSCREEN:FireAllClients(team)
 	end
+	task.wait(10)
+	broadcastScore()
 end
 
 local function addScore(team : Team, points : number)
@@ -71,11 +75,9 @@ local function addScore(team : Team, points : number)
 
 	for team, score in pairs(scoreByTeam) do
 		if team == TEAM_RED and score >= Config.POINT_END_GAME then
-			displayWin("Team Red")
-		end
-
-		if team == TEAM_BLUE and score >= Config.POINT_END_GAME then
-			displayWin("Team Blue")
+			displayWin("Red")
+		elseif team == TEAM_BLUE and score >= Config.POINT_END_GAME then
+			displayWin("Blue")
 		end
 	end
 end
