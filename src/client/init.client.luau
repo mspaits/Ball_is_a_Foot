@@ -125,8 +125,6 @@ end
 
 -- Adding win screen displaying winning team
 local function displayWin(winningTeam)
-	print("Remote worked")
-	print(winningTeam)
 	local winScreen = playerGui:WaitForChild("WinScreenGui")
 	local guiText = winScreen.WinMessage
 	guiText.Text = winningTeam .. " team wins!"
