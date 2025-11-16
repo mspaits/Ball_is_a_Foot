@@ -263,7 +263,7 @@ if UserInputService.TouchEnabled then
 	local touchButtonSprint = Instance.new("TextButton")
 	touchButtonSprint.Name = "SprintButton"
 	touchButtonSprint.AnchorPoint = Vector2.new(1, 1)
-	touchButtonSprint.Position = UDim2.new(1, -32, 1, -10)
+	touchButtonSprint.Position = UDim2.new(0.88, -32, 0.75, -10)
 	touchButtonSprint.Size = UDim2.new(0, 130, 0, 64)
 	touchButtonSprint.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 	touchButtonSprint.TextScaled = true
