@@ -169,10 +169,19 @@ local function applyAngularImpulse(part : BasePart, angularImpulse : Vector3)
 end
 
 -- Applies the kick in predefined amount and angle
-local function applyKick(targetPart : BasePart, forceDirection : Vector3)
-	local base = forceDirection.Unit * Config.KICK_BASE_FORCE
-	local sideways = randomUnitXZ() * Config.KICK_RANDOM_SIDE * Config.KICK_BASE_FORCE
-	local upward = Vector3.new(0, Config.KICK_UPWARD_BIAS * Config.KICK_BASE_FORCE, 0)
+local function applyKick(targetPart : BasePart, forceDirection : Vector3, style : string?)
+	local normalized = forceDirection.Magnitude > 0 and forceDirection.Unit or randomUnitXZ()
+
+	local sidewaysScalar = Config.KICK_RANDOM_SIDE
+	local upwardBias = Config.KICK_UPWARD_BIAS
+	if style == "straight" then
+		sidewaysScalar = sidewaysScalar * 0.5
+		upwardBias = Config.KICK_STRAIGHT_UPWARD_BIAS or Config.KICK_UPWARD_BIAS * 0.25
+	end
+
+	local base = normalized * Config.KICK_BASE_FORCE
+	local sideways = randomUnitXZ() * sidewaysScalar * Config.KICK_BASE_FORCE
+	local upward = Vector3.new(0, upwardBias * Config.KICK_BASE_FORCE, 0)
 	local impulse = base + sideways + upward
 
 	applyImpulseToAssembly(targetPart, impulse)
@@ -187,7 +196,7 @@ end
 
 --  Handles and approves remote kick request
 if REMOTE_KICK then
-	REMOTE_KICK.OnServerEvent:Connect(function(player, target)
+	REMOTE_KICK.OnServerEvent:Connect(function(player, target, style)
 		if typeof(target) ~= "Instance" or not target:IsA("BasePart") then
 			return
 		end
@@ -209,7 +218,10 @@ if REMOTE_KICK then
 		end
 
 		local direction = (target.Position - primary.Position)
-		applyKick(target, direction)
+		if style ~= "straight" then
+			style = "lob"
+		end
+		applyKick(target, direction, style)
 	end)
 end
 

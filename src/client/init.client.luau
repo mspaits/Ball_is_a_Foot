@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local ContextActionService = game:GetService("ContextActionService")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -15,6 +16,8 @@ local REMOTE_SPRINT = Remotes.getRemote("SprintState")
 local REMOTE_SCORE = Remotes.getRemote("ScoreUpdate")
 local REMOTE_WINSCREEN = Remotes.getRemote("WinScreen")
 
+local DONATE_PRODUCT_ID = 3457767597
+
 -- Make a GUI
 local gui = Instance.new("ScreenGui")
 
@@ -27,6 +30,55 @@ gui.IgnoreGuiInset = true
 gui.DisplayOrder = 10
 
 gui.Parent = player:WaitForChild("PlayerGui")
+
+local donateButton = Instance.new("TextButton")
+donateButton.Name = "DonateButton"
+donateButton.AnchorPoint = Vector2.new(1, 0)
+donateButton.Position = UDim2.new(1, -20, 0, 10)
+donateButton.Size = UDim2.new(0, 130, 0, 40)
+donateButton.BackgroundColor3 = Color3.fromRGB(255, 190, 0)
+donateButton.TextScaled = true
+donateButton.Font = Enum.Font.GothamBold
+donateButton.Text = "Donate R$10"
+donateButton.TextColor3 = Color3.fromRGB(30, 30, 30)
+donateButton.AutoButtonColor = true
+donateButton.Parent = gui
+
+local donateCorner = Instance.new("UICorner")
+donateCorner.CornerRadius = UDim.new(0, 12)
+donateCorner.Parent = donateButton
+
+local donateStroke = Instance.new("UIStroke")
+donateStroke.Thickness = 2
+donateStroke.Color = Color3.fromRGB(255, 255, 255)
+donateStroke.Transparency = 0.3
+donateStroke.Parent = donateButton
+
+local donatePromptActive = false
+
+local function promptDonation()
+	if donatePromptActive then
+		return
+	end
+
+	donatePromptActive = true
+	local ok, err = pcall(function()
+		MarketplaceService:PromptProductPurchase(player, DONATE_PRODUCT_ID)
+	end)
+
+	if not ok then
+		donatePromptActive = false
+		warn(string.format("[Donate] Failed to prompt product purchase: %s", err))
+	end
+end
+
+MarketplaceService.PromptProductPurchaseFinished:Connect(function(purchasingPlayer, productId)
+	if purchasingPlayer == player and productId == DONATE_PRODUCT_ID then
+		donatePromptActive = false
+	end
+end)
+
+donateButton.Activated:Connect(promptDonation)
 
 -- Define properties and size of gui
 local function createScoreLabel(name : string, anchorX : number)
@@ -263,7 +315,7 @@ if UserInputService.TouchEnabled then
 	local touchButtonSprint = Instance.new("TextButton")
 	touchButtonSprint.Name = "SprintButton"
 	touchButtonSprint.AnchorPoint = Vector2.new(1, 1)
-	touchButtonSprint.Position = UDim2.new(0.88, -32, 0.75, -10)
+	touchButtonSprint.Position = UDim2.new(0.86, -32, 0.88, -10)
 	touchButtonSprint.Size = UDim2.new(0, 130, 0, 64)
 	touchButtonSprint.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 	touchButtonSprint.TextScaled = true
