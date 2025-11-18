@@ -174,14 +174,17 @@ local function applyKick(targetPart : BasePart, forceDirection : Vector3, style 
 
 	local sidewaysScalar = Config.KICK_RANDOM_SIDE
 	local upwardBias = Config.KICK_UPWARD_BIAS
+	local forceMultiplier = 1
+
 	if style == "straight" then
 		sidewaysScalar = sidewaysScalar * 0.5
 		upwardBias = Config.KICK_STRAIGHT_UPWARD_BIAS or Config.KICK_UPWARD_BIAS * 0.25
+		forceMultiplier = Config.KICK_STRAIGHT_FORCE_MULTIPLIER or 1
 	end
 
-	local base = normalized * Config.KICK_BASE_FORCE
-	local sideways = randomUnitXZ() * sidewaysScalar * Config.KICK_BASE_FORCE
-	local upward = Vector3.new(0, upwardBias * Config.KICK_BASE_FORCE, 0)
+	local base = normalized * Config.KICK_BASE_FORCE * forceMultiplier
+	local sideways = randomUnitXZ() * sidewaysScalar * Config.KICK_BASE_FORCE * forceMultiplier
+	local upward = Vector3.new(0, upwardBias * Config.KICK_BASE_FORCE * forceMultiplier, 0)
 	local impulse = base + sideways + upward
 
 	applyImpulseToAssembly(targetPart, impulse)

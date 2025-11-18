@@ -250,15 +250,26 @@ local function findNearestBall()
 end
 
 -- Functions for connecting remote kick to target and registering to serve?
-local function kick()
+local function requestKick(style : string?)
 	if not REMOTE_KICK then
 		return
 	end
 
 	local target = findNearestBall()
 	if target then
-		REMOTE_KICK:FireServer(target)
+		if style ~= "straight" then
+			style = "lob"
+		end
+		REMOTE_KICK:FireServer(target, style)
 	end
+end
+
+local function kickLob()
+	requestKick("lob")
+end
+
+local function kickStraight()
+	requestKick("straight")
 end
 
 -- For some reason taking into account if they are sprinting or not?
@@ -276,7 +287,14 @@ end
 
 local function onKickAction(_, state, input)
 	if state == Enum.UserInputState.Begin then
-		kick()
+		kickLob()
+	end
+	return Enum.ContextActionResult.Sink
+end
+
+local function onStraightKickAction(_, state)
+	if state == Enum.UserInputState.Begin then
+		kickStraight()
 	end
 	return Enum.ContextActionResult.Sink
 end
@@ -292,25 +310,43 @@ end
 
 -- Declaring key binding for PC and Console
 ContextActionService:BindAction("KickBall", onKickAction, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2, Enum.KeyCode.ButtonA)
+ContextActionService:BindAction("StraightKick", onStraightKickAction, false, Enum.KeyCode.E, Enum.KeyCode.ButtonX)
 ContextActionService:BindAction("Sprint", onSprintAction, false, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3)
 
 if UserInputService.TouchEnabled then
 	local touchButtonKick = Instance.new("TextButton")
 	touchButtonKick.Name = "KickButton"
 	touchButtonKick.AnchorPoint = Vector2.new(1, 1)
-	touchButtonKick.Position = UDim2.new(1, -32, .75, -32)
+	touchButtonKick.Position = UDim2.new(1, -32, .65, -22)
 	touchButtonKick.Size = UDim2.new(0, 130, 0, 64)
-	touchButtonKick.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+	touchButtonKick.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 	touchButtonKick.TextScaled = true
 	touchButtonKick.TextColor3 = Color3.new(1, 1, 1)
-	touchButtonKick.Text = "KICK"
+	touchButtonKick.Text = "HIGH KICK"
 	touchButtonKick.Parent = gui
 
 	local kickCorner = Instance.new("UICorner")
 	kickCorner.CornerRadius = UDim.new(0, 12)
 	kickCorner.Parent = touchButtonKick
 
-	touchButtonKick.MouseButton1Down:Connect(kick)
+	touchButtonKick.MouseButton1Down:Connect(kickLob)
+
+	local touchButtonStraight = Instance.new("TextButton")
+	touchButtonStraight.Name = "StraightKickButton"
+	touchButtonStraight.AnchorPoint = Vector2.new(1, 1)
+	touchButtonStraight.Position = UDim2.new(1, -32, 0.75, -20)
+	touchButtonStraight.Size = UDim2.new(0, 130, 0, 64)
+	touchButtonStraight.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+	touchButtonStraight.TextScaled = true
+	touchButtonStraight.TextColor3 = Color3.new(1, 1, 1)
+	touchButtonStraight.Text = "LOW KICK"
+	touchButtonStraight.Parent = gui
+
+	local straightCorner = Instance.new("UICorner")
+	straightCorner.CornerRadius = UDim.new(0, 12)
+	straightCorner.Parent = touchButtonStraight
+
+	touchButtonStraight.MouseButton1Down:Connect(kickStraight)
 
 	local touchButtonSprint = Instance.new("TextButton")
 	touchButtonSprint.Name = "SprintButton"
