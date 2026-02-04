@@ -29,3 +29,6 @@ sourcemap.json
 # Logs and temp files
 *.log
 *.tmp
+
+# Junk
+pastefile.luau

@@ -272,7 +272,7 @@ local function kickStraight()
 	requestKick("straight")
 end
 
--- For some reason taking into account if they are sprinting or not?
+-- For some reason taking into account if they are sprinting or not?  02Feb26 - Actually is defining the sprint behavior and button assignments.
 local sprinting = false
 
 local function setSprinting(state : boolean)
@@ -309,8 +309,29 @@ local function onSprintAction(_, state)
 end
 
 -- Declaring key binding for PC and Console
-ContextActionService:BindAction("KickBall", onKickAction, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2, Enum.KeyCode.ButtonA)
-ContextActionService:BindAction("StraightKick", onStraightKickAction, false, Enum.KeyCode.E, Enum.KeyCode.ButtonX)
+local kickBindingsActive = false
+
+local function bindKickActions()
+	if kickBindingsActive then
+		return
+	end
+	kickBindingsActive = true
+	ContextActionService:BindAction("KickBall", onKickAction, false, Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2, Enum.KeyCode.ButtonA)
+	ContextActionService:BindAction("StraightKick", onStraightKickAction, false, Enum.KeyCode.E, Enum.KeyCode.ButtonX)
+end
+
+local function unbindKickActions()
+	if not kickBindingsActive then
+		return
+	end
+	kickBindingsActive = false
+	ContextActionService:UnbindAction("KickBall")
+	ContextActionService:UnbindAction("StraightKick")
+end
+
+bindKickActions()
+
+-- Sprint should always be available (even when holding a bat).
 ContextActionService:BindAction("Sprint", onSprintAction, false, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3)
 
 if UserInputService.TouchEnabled then
@@ -371,9 +392,126 @@ if UserInputService.TouchEnabled then
 	end)
 end
 
+-- Bat swing animation (Tool named "Bat")
+local BAT_TOOL_NAME = "Bat"
+local BAT_SWING_ANIMATION_ID = "rbxassetid://111130892594953"
+local BAT_SWING_COOLDOWN = 0.35
+
+local batBindings = {}
+
+local function getAnimatorFromCharacter(char : Model)
+	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return nil
+	end
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+	return animator
+end
+
+local function setupBatTool(tool : Tool)
+	if tool.Name ~= BAT_TOOL_NAME then
+		return
+	end
+	if batBindings[tool] then
+		return
+	end
+
+	local animation = Instance.new("Animation")
+	animation.AnimationId = BAT_SWING_ANIMATION_ID
+
+	local lastSwing = 0
+	local activeTrack
+
+	local function playSwing()
+		local now = os.clock()
+		if now - lastSwing < BAT_SWING_COOLDOWN then
+			return
+		end
+		lastSwing = now
+
+		local char = player.Character
+		if not char then
+			return
+		end
+		local animator = getAnimatorFromCharacter(char)
+		if not animator then
+			return
+		end
+
+		if activeTrack then
+			activeTrack:Stop(0)
+			activeTrack:Destroy()
+			activeTrack = nil
+		end
+
+		local ok, track = pcall(function()
+			return animator:LoadAnimation(animation)
+		end)
+		if not ok or not track then
+			return
+		end
+
+		activeTrack = track
+		activeTrack.Priority = Enum.AnimationPriority.Action
+		activeTrack:Play(0.05, 1, 1)
+	end
+
+	local activatedConn = tool.Activated:Connect(playSwing)
+	local equippedConn = tool.Equipped:Connect(function()
+		unbindKickActions()
+		playSwing()
+	end)
+	local unequippedConn = tool.Unequipped:Connect(function()
+		if activeTrack then
+			activeTrack:Stop(0.1)
+		end
+		bindKickActions()
+	end)
+	local ancestryConn = tool.AncestryChanged:Connect(function(_, parent)
+		if not parent then
+			local bindings = batBindings[tool]
+			if bindings then
+				for _, conn in ipairs(bindings) do
+					conn:Disconnect()
+				end
+				batBindings[tool] = nil
+			end
+		end
+	end)
+
+	batBindings[tool] = { activatedConn, equippedConn, unequippedConn, ancestryConn }
+end
+
+local function scanForBatTools(container : Instance)
+	for _, child in ipairs(container:GetChildren()) do
+		if child:IsA("Tool") then
+			setupBatTool(child)
+		end
+	end
+end
+
+local function watchContainer(container : Instance)
+	scanForBatTools(container)
+	container.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") then
+			setupBatTool(child)
+		end
+	end)
+end
+
+watchContainer(player.Backpack)
+if player.Character then
+	watchContainer(player.Character)
+end
+
 player.CharacterAdded:Connect(function(newChar)
 	character = newChar
 	setSprinting(false)
+	watchContainer(newChar)
 end)
 
 awaitCharacter()
