@@ -95,6 +95,73 @@ Players.PlayerRemoving:Connect(function(player)
 	player:SetAttribute("Sprinting", nil)
 end)
 
+local TEAM_INDICATOR_NAME = "TeamIndicator"
+
+local function getTeamColor(team : Team?)
+	if team and team.TeamColor then
+		return team.TeamColor.Color
+	end
+	return Color3.fromRGB(200, 200, 200)
+end
+
+local function applyTeamIndicator(player : Player, character : Model)
+	local head = character:FindFirstChild("Head") or character:WaitForChild("Head", 5)
+	if not head or not head:IsA("BasePart") then
+		return
+	end
+
+	local existing = head:FindFirstChild(TEAM_INDICATOR_NAME)
+	if existing then
+		existing:Destroy()
+	end
+
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = TEAM_INDICATOR_NAME
+	billboard.AlwaysOnTop = true
+	billboard.Size = UDim2.fromOffset(16, 16)
+	billboard.StudsOffset = Vector3.new(0, 1.2, 0)
+	billboard.Parent = head
+
+	local dot = Instance.new("Frame")
+	dot.Size = UDim2.fromScale(1, 1)
+	dot.BackgroundColor3 = getTeamColor(player.Team)
+	dot.BorderSizePixel = 0
+	dot.Parent = billboard
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = dot
+end
+
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(character)
+		applyTeamIndicator(player, character)
+	end)
+	if player.Character then
+		applyTeamIndicator(player, player.Character)
+	end
+
+	player:GetPropertyChangedSignal("Team"):Connect(function()
+		local character = player.Character
+		if not character then
+			return
+		end
+		local head = character:FindFirstChild("Head")
+		if not head then
+			return
+		end
+		local indicator = head:FindFirstChild(TEAM_INDICATOR_NAME)
+		if indicator then
+			local dot = indicator:FindFirstChildWhichIsA("Frame")
+			if dot then
+				dot.BackgroundColor3 = getTeamColor(player.Team)
+			end
+		else
+			applyTeamIndicator(player, character)
+		end
+	end)
+end)
+
 -- A function for randomly assigning a kick vector?
 local function randomUnitXZ()
 	local theta = math.random() * math.pi * 2
