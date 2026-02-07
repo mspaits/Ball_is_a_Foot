@@ -12,6 +12,13 @@ local REMOTE_KICK = Remotes.getRemote("KickRequest")
 local REMOTE_SPRINT = Remotes.getRemote("SprintState")
 local REMOTE_SCORE = Remotes.getRemote("ScoreUpdate")
 local REMOTE_WINSCREEN = Remotes.getRemote("WinScreen")
+local REMOTES_FOLDER = Remotes.getFolder()
+local REMOTE_RAGDOLL = REMOTES_FOLDER:FindFirstChild("RagdollRequest")
+if not REMOTE_RAGDOLL then
+	REMOTE_RAGDOLL = Instance.new("RemoteEvent")
+	REMOTE_RAGDOLL.Name = "RagdollRequest"
+	REMOTE_RAGDOLL.Parent = REMOTES_FOLDER
+end
 
 -- Define names of football and stinky foot
 local FOOTBALL_NAME = "Football"
@@ -43,6 +50,22 @@ local scoreByTeam = {
 	[TEAM_BLUE] = 0,
 }
 
+local gameOver = false
+
+local SPINNER_CONTAINER_NAMES = {
+	"SpinnerWedge",
+	"Spinner",
+	"SpinnerWedgeMover",
+}
+
+local SPINNER_RAGDOLL_DURATION = 2.5
+local SPINNER_RAGDOLL_COOLDOWN = 1
+local SPINNER_FLING_HORIZONTAL = 75
+local SPINNER_FLING_UP = 55
+local RAGDOLL_BUTTON_DURATION = 2.5
+local RAGDOLL_BUTTON_COOLDOWN = 2
+local spinnerContainersHooked : {[Instance]: boolean} = {}
+
 -- Adding points to team
 local function broadcastScore()
 	if REMOTE_SCORE then
@@ -53,18 +76,230 @@ local function broadcastScore()
 	end
 end
 
-local function displayWin(team)
-	print(team .. " wins")
+local function ragdollCharacter(character : Model, duration : number)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
+		return
+	end
+
+	if character:FindFirstChild("__TempRagdoll") then
+		return
+	end
+
+	local tag = Instance.new("Folder")
+	tag.Name = "__TempRagdoll"
+	tag.Parent = character
+
+	local constraintsFolder = Instance.new("Folder")
+	constraintsFolder.Name = "RagdollConstraints"
+	constraintsFolder.Parent = tag
+
+	for _, motor in ipairs(character:GetDescendants()) do
+		if motor:IsA("Motor6D") then
+			local part0 = motor.Part0
+			local part1 = motor.Part1
+			if part0 and part1 then
+				local att0 = Instance.new("Attachment")
+				att0.Name = "__RagdollAttachment0"
+				att0.CFrame = motor.C0
+				att0.Parent = part0
+
+				local att1 = Instance.new("Attachment")
+				att1.Name = "__RagdollAttachment1"
+				att1.CFrame = motor.C1
+				att1.Parent = part1
+
+				local socket = Instance.new("BallSocketConstraint")
+				socket.Attachment0 = att0
+				socket.Attachment1 = att1
+				socket.LimitsEnabled = true
+				socket.TwistLimitsEnabled = true
+				socket.UpperAngle = 45
+				socket.TwistLowerAngle = -45
+				socket.TwistUpperAngle = 45
+				socket.Parent = constraintsFolder
+
+				motor.Enabled = false
+			end
+		end
+	end
+
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	humanoid.PlatformStand = true
+
+	task.delay(duration, function()
+		if humanoid.Parent and humanoid.Health > 0 then
+			for _, motor in ipairs(character:GetDescendants()) do
+				if motor:IsA("Motor6D") then
+					motor.Enabled = true
+				end
+			end
+
+			for _, attachment in ipairs(character:GetDescendants()) do
+				if attachment:IsA("Attachment") and (attachment.Name == "__RagdollAttachment0" or attachment.Name == "__RagdollAttachment1") then
+					attachment:Destroy()
+				end
+			end
+
+			if tag.Parent then
+				tag:Destroy()
+			end
+
+			humanoid.PlatformStand = false
+			humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+		end
+	end)
+end
+
+local ragdollCooldownByPlayer : {[Player]: number} = {}
+if REMOTE_RAGDOLL then
+	REMOTE_RAGDOLL.OnServerEvent:Connect(function(player)
+		local now = tick()
+		local last = ragdollCooldownByPlayer[player]
+		if last and now - last < RAGDOLL_BUTTON_COOLDOWN then
+			return
+		end
+
+		local character = player.Character
+		if not character then
+			return
+		end
+
+		ragdollCooldownByPlayer[player] = now
+		ragdollCharacter(character, RAGDOLL_BUTTON_DURATION)
+	end)
+end
+
+local function flingCharacterFromPart(character : Model, spinnerPart : BasePart)
+	local root = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
+	if not root or not root:IsA("BasePart") then
+		return
+	end
+
+	local dir = root.Position - spinnerPart.Position
+	if dir.Magnitude < 0.1 then
+		dir = spinnerPart.CFrame.LookVector
+	end
+	dir = dir.Unit
+
+	local impulse = (dir * SPINNER_FLING_HORIZONTAL + Vector3.new(0, SPINNER_FLING_UP, 0)) * root.AssemblyMass
+	root:ApplyImpulse(impulse)
+end
+
+local recentSpinnerHits : {[Model]: number} = {}
+
+local function onSpinnerTouched(spinnerPart : BasePart, hit : BasePart)
+	local character = hit:FindFirstAncestorOfClass("Model")
+	if not character then
+		return
+	end
+
+	local player = Players:GetPlayerFromCharacter(character)
+	if not player then
+		return
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
+		return
+	end
+
+	local now = tick()
+	local lastHit = recentSpinnerHits[character]
+	if lastHit and now - lastHit < SPINNER_RAGDOLL_COOLDOWN then
+		return
+	end
+	recentSpinnerHits[character] = now
+
+	ragdollCharacter(character, SPINNER_RAGDOLL_DURATION)
+	flingCharacterFromPart(character, spinnerPart)
+end
+
+local function hookSpinnerContainer(container : Instance)
+	if spinnerContainersHooked[container] then
+		return
+	end
+	spinnerContainersHooked[container] = true
+
+	for _, descendant in ipairs(container:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			descendant.Touched:Connect(function(hit)
+				onSpinnerTouched(descendant, hit)
+			end)
+		end
+	end
+
+	container.DescendantAdded:Connect(function(instance)
+		if instance:IsA("BasePart") then
+			instance.Touched:Connect(function(hit)
+				onSpinnerTouched(instance, hit)
+			end)
+		end
+	end)
+end
+
+for _, name in ipairs(SPINNER_CONTAINER_NAMES) do
+	for _, child in ipairs(Workspace:GetChildren()) do
+		if child.Name == name then
+			hookSpinnerContainer(child)
+		end
+	end
+end
+
+Workspace.ChildAdded:Connect(function(child)
+	for _, name in ipairs(SPINNER_CONTAINER_NAMES) do
+		if child.Name == name then
+			hookSpinnerContainer(child)
+			break
+		end
+	end
+end)
+
+local function killLosingTeam(winningTeam : Team)
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Team ~= winningTeam then
+			local character = player.Character
+			if character then
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					humanoid.Health = 0
+				else
+					character:Destroy()
+				end
+			end
+		end
+	end
+end
+
+local function displayWin(winningTeam : Team)
+	if gameOver then
+		return
+	end
+
+	gameOver = true
+	print(winningTeam.Name .. " wins")
+
+	if REMOTE_WINSCREEN then
+		REMOTE_WINSCREEN:FireAllClients(winningTeam.Name)
+	end
+
+	-- Let the win register on-screen, then eliminate the losing team
+	task.wait(3)
+	killLosingTeam(winningTeam)
+
+	-- Keep the win screen up a bit longer before resetting scores
+	task.wait(7)
 	scoreByTeam[TEAM_RED] = 0
 	scoreByTeam[TEAM_BLUE] = 0
-	if REMOTE_WINSCREEN then
-		REMOTE_WINSCREEN:FireAllClients(team)
-	end
-	task.wait(10)
 	broadcastScore()
+	gameOver = false
 end
 
 local function addScore(team : Team, points : number)
+	if gameOver then
+		return
+	end
+
 	if not scoreByTeam[team] then
 		return
 	end
@@ -75,9 +310,9 @@ local function addScore(team : Team, points : number)
 
 	for team, score in pairs(scoreByTeam) do
 		if team == TEAM_RED and score >= Config.POINT_END_GAME then
-			displayWin("Red")
+			displayWin(TEAM_RED)
 		elseif team == TEAM_BLUE and score >= Config.POINT_END_GAME then
-			displayWin("Blue")
+			displayWin(TEAM_BLUE)
 		end
 	end
 end

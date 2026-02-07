@@ -15,6 +15,10 @@ local REMOTE_KICK = Remotes.getRemote("KickRequest")
 local REMOTE_SPRINT = Remotes.getRemote("SprintState")
 local REMOTE_SCORE = Remotes.getRemote("ScoreUpdate")
 local REMOTE_WINSCREEN = Remotes.getRemote("WinScreen")
+local REMOTE_RAGDOLL = Remotes.getRemote("RagdollRequest")
+if not REMOTE_RAGDOLL then
+	REMOTE_RAGDOLL = Remotes.getFolder():WaitForChild("RagdollRequest")
+end
 
 local DONATE_PRODUCT_ID = 3457767597
 
@@ -79,6 +83,38 @@ MarketplaceService.PromptProductPurchaseFinished:Connect(function(purchasingPlay
 end)
 
 donateButton.Activated:Connect(promptDonation)
+
+local ragdollButton = Instance.new("TextButton")
+ragdollButton.Name = "RagdollButton"
+ragdollButton.AnchorPoint = Vector2.new(1, 1)
+ragdollButton.Position = UDim2.new(1, -20, 1, -20)
+ragdollButton.Size = UDim2.new(0, 140, 0, 44)
+ragdollButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+ragdollButton.TextScaled = true
+ragdollButton.Font = Enum.Font.GothamBold
+ragdollButton.Text = "Ragdoll (R)"
+ragdollButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ragdollButton.AutoButtonColor = true
+ragdollButton.Visible = UserInputService.TouchEnabled
+ragdollButton.Parent = gui
+
+local ragdollCorner = Instance.new("UICorner")
+ragdollCorner.CornerRadius = UDim.new(0, 12)
+ragdollCorner.Parent = ragdollButton
+
+local ragdollStroke = Instance.new("UIStroke")
+ragdollStroke.Thickness = 2
+ragdollStroke.Color = Color3.fromRGB(255, 255, 255)
+ragdollStroke.Transparency = 0.4
+ragdollStroke.Parent = ragdollButton
+
+local function requestRagdoll()
+	if REMOTE_RAGDOLL then
+		REMOTE_RAGDOLL:FireServer()
+	end
+end
+
+ragdollButton.Activated:Connect(requestRagdoll)
 
 -- Define properties and size of gui
 local function createScoreLabel(name : string, anchorX : number)
@@ -308,6 +344,13 @@ local function onSprintAction(_, state)
 	return Enum.ContextActionResult.Sink
 end
 
+local function onRagdollAction(_, state)
+	if state == Enum.UserInputState.Begin then
+		requestRagdoll()
+	end
+	return Enum.ContextActionResult.Sink
+end
+
 -- Declaring key binding for PC and Console
 local kickBindingsActive = false
 
@@ -333,6 +376,7 @@ bindKickActions()
 
 -- Sprint should always be available (even when holding a bat).
 ContextActionService:BindAction("Sprint", onSprintAction, false, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL3)
+ContextActionService:BindAction("RagdollSelf", onRagdollAction, false, Enum.KeyCode.R)
 
 if UserInputService.TouchEnabled then
 	local touchButtonKick = Instance.new("TextButton")
