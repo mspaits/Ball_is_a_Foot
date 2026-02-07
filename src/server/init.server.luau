@@ -12,13 +12,6 @@ local REMOTE_KICK = Remotes.getRemote("KickRequest")
 local REMOTE_SPRINT = Remotes.getRemote("SprintState")
 local REMOTE_SCORE = Remotes.getRemote("ScoreUpdate")
 local REMOTE_WINSCREEN = Remotes.getRemote("WinScreen")
-local REMOTES_FOLDER = Remotes.getFolder()
-local REMOTE_RAGDOLL = REMOTES_FOLDER:FindFirstChild("RagdollRequest")
-if not REMOTE_RAGDOLL then
-	REMOTE_RAGDOLL = Instance.new("RemoteEvent")
-	REMOTE_RAGDOLL.Name = "RagdollRequest"
-	REMOTE_RAGDOLL.Parent = REMOTES_FOLDER
-end
 
 -- Define names of football and stinky foot
 local FOOTBALL_NAME = "Football"
@@ -62,8 +55,6 @@ local SPINNER_RAGDOLL_DURATION = 2.5
 local SPINNER_RAGDOLL_COOLDOWN = 1
 local SPINNER_FLING_HORIZONTAL = 75
 local SPINNER_FLING_UP = 55
-local RAGDOLL_BUTTON_DURATION = 2.5
-local RAGDOLL_BUTTON_COOLDOWN = 2
 local spinnerContainersHooked : {[Instance]: boolean} = {}
 
 -- Adding points to team
@@ -148,25 +139,6 @@ local function ragdollCharacter(character : Model, duration : number)
 			humanoid.PlatformStand = false
 			humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 		end
-	end)
-end
-
-local ragdollCooldownByPlayer : {[Player]: number} = {}
-if REMOTE_RAGDOLL then
-	REMOTE_RAGDOLL.OnServerEvent:Connect(function(player)
-		local now = tick()
-		local last = ragdollCooldownByPlayer[player]
-		if last and now - last < RAGDOLL_BUTTON_COOLDOWN then
-			return
-		end
-
-		local character = player.Character
-		if not character then
-			return
-		end
-
-		ragdollCooldownByPlayer[player] = now
-		ragdollCharacter(character, RAGDOLL_BUTTON_DURATION)
 	end)
 end
 
