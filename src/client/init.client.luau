@@ -39,7 +39,7 @@ donateButton.Size = UDim2.new(0, 130, 0, 40)
 donateButton.BackgroundColor3 = Color3.fromRGB(255, 190, 0)
 donateButton.TextScaled = true
 donateButton.Font = Enum.Font.GothamBold
-donateButton.Text = "Donate R$10"
+donateButton.Text = "Donate \u{E002}10"
 donateButton.TextColor3 = Color3.fromRGB(30, 30, 30)
 donateButton.AutoButtonColor = true
 donateButton.Parent = gui
@@ -179,7 +179,7 @@ end
 local function displayWin(winningTeam)
 	local winScreen = playerGui:WaitForChild("WinScreenGui")
 	local guiText = winScreen.WinMessage
-	guiText.Text = winningTeam .. " team wins!"
+	guiText.Text = winningTeam .. " team wins!\nLosers explode!"
 	winScreen.Enabled = true
 	task.wait(10)
 	winScreen.Enabled = false

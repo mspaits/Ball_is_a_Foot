@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local TeamsService = game:GetService("Teams")
 local Workspace = game:GetService("Workspace")
+local Debris = game:GetService("Debris")
 
 -- Both module scripts in ReplicatedStorage
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -227,6 +228,21 @@ Workspace.ChildAdded:Connect(function(child)
 	end
 end)
 
+local function explodeCharacter(character : Model)
+	local root = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Head")
+	if not root or not root:IsA("BasePart") then
+		return
+	end
+
+	local explosion = Instance.new("Explosion")
+	explosion.Position = root.Position
+	explosion.BlastRadius = 10
+	explosion.BlastPressure = 0
+	explosion.DestroyJointRadiusPercent = 0
+	explosion.Parent = Workspace
+	Debris:AddItem(explosion, 2)
+end
+
 local function killLosingTeam(winningTeam : Team)
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player.Team ~= winningTeam then
@@ -234,6 +250,7 @@ local function killLosingTeam(winningTeam : Team)
 			if character then
 				local humanoid = character:FindFirstChildOfClass("Humanoid")
 				if humanoid then
+					explodeCharacter(character)
 					humanoid.Health = 0
 				else
 					character:Destroy()
